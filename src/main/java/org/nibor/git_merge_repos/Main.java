@@ -11,6 +11,9 @@ import java.util.regex.Pattern;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.URIish;
+import org.nibor.git_merge_repos.merger.RepoMerger;
+import org.nibor.git_merge_repos.vo.MergedRef;
+import org.nibor.git_merge_repos.vo.SubtreeConfig;
 
 /**
  * Main class for merging repositories via command-line.
@@ -39,21 +42,21 @@ public class Main {
 			exitInvalidUsage("usage: program <repository_url>:<target_directory>...");
 		}
 
-		File outputDirectory = new File("merged-repo");
-		String outputPath = outputDirectory.getAbsolutePath();
+		//todo: Make the following path configurable if needed
+		File outputDirectory = new File("/udir/sankarge/git/merge/output/merged");
+		String outputPath = outputDirectory.getPath();
 		System.out.println("Started merging " + subtreeConfigs.size()
 				+ " repositories into one, output directory: " + outputPath);
 
 		long start = System.currentTimeMillis();
 		RepoMerger merger = new RepoMerger(outputPath, subtreeConfigs);
-		List<MergedRef> mergedRefs = merger.run();
+		merger.run();
 		long end = System.currentTimeMillis();
 
 		long timeMs = (end - start);
-		printIncompleteRefs(mergedRefs);
-		System.out.println("Done, took " + timeMs + " ms");
+		printIncompleteRefs(merger.getMergedRefs());
+		System.out.println("Done, took " + (timeMs/1000)/60 + " mins");
 		System.out.println("Merged repository: " + outputPath);
-
 	}
 
 	private static void printIncompleteRefs(List<MergedRef> mergedRefs) {

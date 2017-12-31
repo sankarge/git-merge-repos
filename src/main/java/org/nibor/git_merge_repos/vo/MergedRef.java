@@ -1,4 +1,4 @@
-package org.nibor.git_merge_repos;
+package org.nibor.git_merge_repos.vo;
 
 import java.util.Collection;
 
