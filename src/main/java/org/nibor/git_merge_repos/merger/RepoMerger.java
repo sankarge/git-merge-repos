@@ -1,18 +1,13 @@
 package org.nibor.git_merge_repos.merger;
 
-import org.eclipse.jgit.api.DescribeCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.lib.*;
-import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.transport.RefSpec;
-import org.nibor.git_merge_repos.log.LoggerUtil;
+import org.nibor.git_merge_repos.util.FileUtil;
 import org.nibor.git_merge_repos.vo.MergedRef;
 import org.nibor.git_merge_repos.vo.SubtreeConfig;
-import org.nibor.git_merge_repos.vo.TagInfo;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,6 +17,7 @@ import java.util.stream.Collectors;
 
 import static org.eclipse.jgit.lib.Constants.R_HEADS;
 import static org.eclipse.jgit.lib.Constants.R_TAGS;
+import static org.nibor.git_merge_repos.log.LoggerUtil.MERGE_LOG;
 
 /**
  * Fetches original repos, merges original branches/tags of different repos and
@@ -29,19 +25,17 @@ import static org.eclipse.jgit.lib.Constants.R_TAGS;
  */
 public class RepoMerger {
 
-    private static final String HEADS = R_HEADS + "original/";
+    public static final String HEADS = R_HEADS + "original/";
 
-    private static final String TAGS = R_TAGS + "original/";
+    public static final String TAGS = R_TAGS + "original/";
 
-    private final Git git;
+    protected final Git git;
 
-    private final Repository repository;
+    protected final Repository repository;
 
-    private final List<SubtreeConfig> subtreeConfigs;
+    protected final List<SubtreeConfig> subtreeConfigs;
 
-    private Map<String, String> tagParentInfo = new HashMap<>();
-
-    private final List<MergedRef> mergedRefs = new ArrayList<>();
+    private Map tagParentInfo;
 
     public RepoMerger(String outputRepositoryPath,
                       List<SubtreeConfig> subtreeConfigs) throws IOException {
@@ -54,29 +48,19 @@ public class RepoMerger {
         git = new Git(repository);
     }
 
-    private void fetch() throws GitAPIException {
-        for (SubtreeConfig config : subtreeConfigs) {
-            RefSpec branchesSpec = new RefSpec(
-                    "refs/heads/*:refs/heads/original/"
-                            + config.getRemoteName() + "/*");
-            RefSpec tagsSpec = new RefSpec("refs/tags/*:refs/tags/original/"
-                    + config.getRemoteName() + "/*");
-            git.fetch().setRemote(config.getFetchUri().toPrivateString())
-                    .setRefSpecs(branchesSpec, tagsSpec).call();
-        }
+    public void loadParentTagInfo() {
+        tagParentInfo = FileUtil.loadMap();
     }
 
     public void run() throws IOException, GitAPIException {
 
-//        fetch();
+        loadParentTagInfo();
 
         Collection<String> branches = getRefSet(HEADS);
 
         Collection<String> tags = getRefSet(TAGS);
 
         Map<String, TreeSet<String>> tagsOfBranch = groupTagsUnderBranch(branches, tags);
-
-        loadParentTagForFirstTagOfEachBranch(tagsOfBranch);
 
         mergeOlder(tags, tagsOfBranch);
 
@@ -87,44 +71,38 @@ public class RepoMerger {
         resetToBranch();
     }
 
-    private void loadParentTagForFirstTagOfEachBranch(Map<String, TreeSet<String>> tagsOfBranch) {
-        tagsOfBranch.values().forEach(s -> s.stream().findFirst().ifPresent(this::loadParentTag));
-    }
-
     private void mergeOlder(Collection<String> tags, Map<String, TreeSet<String>> tagsOfBranch) {
-        LoggerUtil.log.log(Level.SEVERE, "Following are the list of tags that doesn't start/match with branch prefix.");
         tags.removeAll(tagsOfBranch.values().stream().flatMap(Collection::stream).collect(Collectors.toList()));
-        LoggerUtil.log.log(Level.SEVERE, tags.toString());
+        logSevere("Following are the list of tags that incrementing pattern [tag number + 1] cannot be applied.");
+        logSevere(tags.toString());
 
         TagMerger tagMerger = new TagMerger(subtreeConfigs, repository, Collections.emptyMap());
         tags.forEach(s -> {
             try {
-                mergedRefs.add(tagMerger.mergeTag(s));
+                tagMerger.mergeTag(s);
             } catch (IOException e) {
-                LoggerUtil.log.log(Level.SEVERE, "Problem in merging tag " + s + " due to " + e.getMessage());
+                logSevere("Problem in merging tag " + s + " due to " + e.getMessage());
             }
         });
     }
 
     private void mergeNewer(Map<String, TreeSet<String>> tagsOfBranch) {
-        BranchMerger branchMerger = new BranchMerger(subtreeConfigs, repository);
         TagMerger tagMerger = new TagMerger(subtreeConfigs, repository, tagParentInfo);
+        BranchMerger branchMerger = new BranchMerger(subtreeConfigs, repository);
 
         for (Map.Entry<String, TreeSet<String>> entry : tagsOfBranch.entrySet()) {
             String branch = entry.getKey();
             TreeSet<String> tagsSorted = entry.getValue();
             try {
-                List<MergedRef> mergedTags = tagMerger.mergeTags(tagsSorted);
-                MergedRef mergedBranch = branchMerger.mergeBranch(branch, tagMerger.getPreviousTag());
-                mergedRefs.add(mergedBranch);
-                mergedRefs.addAll(mergedTags);
+                String latestTag = tagMerger.mergeTags(tagsSorted);
+                branchMerger.mergeBranch(branch, latestTag);
             } catch (Exception e) {
-                LoggerUtil.log.log(Level.SEVERE, "Problem in merging tags & branch of " + branch + " due to " + e.getMessage());
+                logSevere("Problem in merging tags & branch of " + branch + " due to " + e.getMessage());
             }
         }
     }
 
-    private Map<String, TreeSet<String>> groupTagsUnderBranch(Collection<String> branches, Collection<String> tags) throws IOException {
+    protected Map<String, TreeSet<String>> groupTagsUnderBranch(Collection<String> branches, Collection<String> tags) throws IOException {
         Map<String, TreeSet<String>> tagsOfBranch = new TreeMap<>();
         for (String branch : branches) {
             tagsOfBranch.put(branch, new TreeSet<>(tagSorter));
@@ -138,36 +116,6 @@ public class RepoMerger {
             }
         }
         return tagsOfBranch;
-    }
-
-    private void loadParentTag(String tag) {
-        LoggerUtil.log.info("Finding parent tag of " + tag);
-        List<TagInfo> parentTagSet = new ArrayList<>();
-
-        for (SubtreeConfig config : subtreeConfigs) {
-            String tagFullPath = TAGS + config.getRemoteName() + "/" + tag;
-            try {
-                DescribeCommand describeCommand = git.describe();
-                describeCommand.setTarget(tagFullPath);
-                String parentTag = describeCommand.call();
-                parentTagSet.add(new TagInfo(trim(parentTag), findTag(parentTag).getTaggerIdent().getWhen(), config.getRemoteName()));
-            } catch (RefNotFoundException e) {
-                LoggerUtil.log.log(Level.SEVERE, e.getMessage());
-            } catch (Exception e) {
-                LoggerUtil.log.log(Level.SEVERE, "Exception while executing DescribeCommand. " + e.getMessage());
-            }
-        }
-        tagParentInfo.put(tag, TagInfo.findLatestTag(tag, parentTagSet));
-    }
-
-    private String trim(String parentTag) {
-        return parentTag.substring(parentTag.lastIndexOf("/") + 1, parentTag.length());
-    }
-
-    private RevTag findTag(String tagName) throws IOException {
-        ObjectId objectId = repository.resolve(tagName);
-        RevWalk revWalk = new RevWalk(repository);
-        return revWalk.parseTag(objectId);
     }
 
     private final Comparator<String> tagSorter = (tag1, tag2) -> {
@@ -200,7 +148,7 @@ public class RepoMerger {
         }
     }
 
-    private Collection<String> getRefSet(String prefix) throws IOException {
+    protected Collection<String> getRefSet(String prefix) throws IOException {
         Map<String, Ref> refs = repository.getRefDatabase().getRefs(prefix);
         TreeSet<String> result = new TreeSet<>();
         for (String refName : refs.keySet()) {
@@ -211,6 +159,13 @@ public class RepoMerger {
     }
 
     public List<MergedRef> getMergedRefs() {
+        List<MergedRef> mergedRefs = new ArrayList<>();
+        mergedRefs.addAll(TagMerger.getMergedRefs());
+        mergedRefs.addAll(BranchMerger.getMergedRefs());
         return mergedRefs;
+    }
+
+    private void logSevere(String msg) {
+        MERGE_LOG.log(Level.SEVERE, msg);
     }
 }

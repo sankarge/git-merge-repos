@@ -16,25 +16,29 @@ import java.util.*;
  */
 public class TagMerger extends AbstractMerger {
 
-    private final Map<String, String> tagParentInfo;
+    public static final List<MergedRef> mergedRefs = new ArrayList<>();
 
-    private String previousTag = null;
+    private final Map<String, String> tagParentInfo;
 
     public TagMerger(List<SubtreeConfig> subtreeConfigs, Repository repository, Map<String, String> tagParentInfo) {
         super(subtreeConfigs, repository);
         this.tagParentInfo = tagParentInfo;
     }
 
-    public List<MergedRef> mergeTags(Collection<String> tags) throws IOException {
-        List<MergedRef> mergedRefs = new ArrayList<>();
+    public String mergeTags(Collection<String> tags) throws IOException {
+        String previousTag = null;
         for (String tag : tags) {
-            MergedRef mergedTag = mergeTag(tag);
-            mergedRefs.add(mergedTag);
+            previousTag = mergeTag(tag, previousTag);
         }
-        return mergedRefs;
+
+        return previousTag;
     }
 
-    public MergedRef mergeTag(String tagName) throws IOException {
+    public void mergeTag(String tagName) throws IOException {
+        mergeTag(tagName, null);
+    }
+
+    public String mergeTag(String tagName, String parentTag) throws IOException {
         Map<SubtreeConfig, ObjectId> resolvedRefs = resolveRefs(
                 "refs/tags/original/", tagName);
 
@@ -88,18 +92,18 @@ public class TagMerger extends AbstractMerger {
             }
         }
 
-        if (previousTag == null) {
-            previousTag = tagParentInfo.get(tagName);
+        if (parentTag == null) {
+            parentTag = tagParentInfo.get(tagName);
         }
 
         MergedRef mergedRef = getMergedRef("tag", tagName, parentCommits.keySet());
         ObjectId mergeCommit;
 
-        if (previousTag == null) {
+        if (parentTag == null) {
             mergeCommit = new SubtreeMerger(repository).createMergeCommit(parentCommits,
                     mergedRef.getMessage());
         } else {
-            RevCommit prevTagCommit = getCommitOfTag(previousTag);
+            RevCommit prevTagCommit = getCommitOfTag(parentTag);
             mergeCommit = new SubtreeMerger(repository).createMergeCommit(parentCommits, prevTagCommit,
                     mergedRef.getMessage());
         }
@@ -129,11 +133,12 @@ public class TagMerger extends AbstractMerger {
                     + objectToReference + " failed with result " + result);
         }
 
-        previousTag = tagName;
-        return mergedRef;
+        parentTag = tagName;
+        mergedRefs.add(mergedRef);
+        return parentTag;
     }
 
-    public String getPreviousTag() {
-        return previousTag;
+    public static List<MergedRef> getMergedRefs() {
+        return mergedRefs;
     }
 }

@@ -26,19 +26,20 @@ public class TagInfo {
 
     public static String findLatestTag(String tag, Collection<TagInfo> parentTagInfoSet) {
         parentTagInfoSet.forEach(tagInfo -> {
-            LoggerUtil.log.info(tagInfo.repoName + " => " + tagInfo.getName() + ", " + tagInfo.date);
+            LoggerUtil.PREPARE_LOG.info(tagInfo.repoName + " => " + tagInfo.getName() + ", " + tagInfo.date);
         });
         Optional<TagInfo> tagInfoOptional = parentTagInfoSet
                 .stream()
                 .filter(tagInfo -> !tagInfo.getName().equals(tag))
+                .filter(tagInfo -> tagInfo.date != null)
                 .sorted((o1, o2) -> o2.date.compareTo(o1.date))
                 .findFirst();
         if (tagInfoOptional.isPresent()) {
             String parentTag = tagInfoOptional.get().getName();
-            LoggerUtil.log.info("Latest parent tag for " + tag + " is " + parentTag);
+            LoggerUtil.PREPARE_LOG.info("findLatestTag: parent tag for " + tag + " is " + parentTag + "\n");
             return parentTag;
         } else {
-            LoggerUtil.log.info("Unable to find unique and latest parent tag for " + tag);
+            LoggerUtil.PREPARE_LOG.info("findLatestTag: Unable to collect parent tag for " + tag + "\n");
             return null;
         }
     }

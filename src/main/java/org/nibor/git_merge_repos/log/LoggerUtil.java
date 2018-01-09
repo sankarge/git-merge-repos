@@ -1,5 +1,6 @@
 package org.nibor.git_merge_repos.log;
 
+import org.nibor.git_merge_repos.merger.ParentTagCollector;
 import org.nibor.git_merge_repos.merger.RepoMerger;
 
 import java.io.IOException;
@@ -12,9 +13,11 @@ import java.util.logging.Logger;
  */
 public class LoggerUtil {
 
-    public static final Logger log = Logger.getLogger(LoggerUtil.class.getName());
+    public static final Logger PREPARE_LOG = Logger.getLogger(ParentTagCollector.class.getName());
 
-    {
+    public static final Logger MERGE_LOG = Logger.getLogger(RepoMerger.class.getName());
+
+    static {
         try {
             configLogger();
         } catch (IOException e) {
@@ -23,10 +26,16 @@ public class LoggerUtil {
     }
 
     private static void configLogger() throws IOException {
-        FileHandler fh = new FileHandler(RepoMerger.class.getSimpleName() + ".log", true);
-        fh.setLevel(Level.ALL);
-        fh.setFormatter(new CustomLogFormatter());
-        log.addHandler(fh);
-        log.setUseParentHandlers(false);
+        FileHandler mergeFilerHandler = new FileHandler("merge.log", false);
+        mergeFilerHandler.setLevel(Level.ALL);
+        mergeFilerHandler.setFormatter(new CustomLogFormatter());
+        MERGE_LOG.addHandler(mergeFilerHandler);
+        MERGE_LOG.setUseParentHandlers(false);
+
+        FileHandler prepareFileHandler = new FileHandler("prepare.log", false);
+        prepareFileHandler.setLevel(Level.ALL);
+        prepareFileHandler.setFormatter(new CustomLogFormatter());
+        PREPARE_LOG.addHandler(prepareFileHandler);
+        PREPARE_LOG.setUseParentHandlers(false);
     }
 }

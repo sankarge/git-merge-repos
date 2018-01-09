@@ -9,6 +9,7 @@ import org.nibor.git_merge_repos.vo.MergedRef;
 import org.nibor.git_merge_repos.vo.SubtreeConfig;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,11 +19,13 @@ import java.util.Map;
  */
 public class BranchMerger extends AbstractMerger {
 
+    public static final List<MergedRef> mergedRefs = new ArrayList<>();
+
     public BranchMerger(List<SubtreeConfig> subtreeConfigs, Repository repository) {
         super(subtreeConfigs, repository);
     }
 
-    public MergedRef mergeBranch(String branch, String previousTag) throws IOException {
+    public void mergeBranch(String branch, String previousTag) throws IOException {
         Map<SubtreeConfig, ObjectId> resolvedRefs = resolveRefs(
                 "refs/heads/original/", branch);
 
@@ -51,6 +54,10 @@ public class BranchMerger extends AbstractMerger {
         RefUpdate refUpdate = repository.updateRef("refs/heads/" + branch);
         refUpdate.setNewObjectId(mergeCommit);
         refUpdate.update();
-        return mergedRef;
+        mergedRefs.add(mergedRef);
+    }
+
+    public static List<MergedRef> getMergedRefs() {
+        return mergedRefs;
     }
 }

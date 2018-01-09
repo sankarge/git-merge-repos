@@ -54,7 +54,8 @@ public class AbstractMerger {
             }
             return revCommit;
         } catch (Exception e) {
-            LoggerUtil.log.log(Level.SEVERE, "Unable to getCommitOfTag " + tagName + " due to " + e.getMessage());
+            LoggerUtil.PREPARE_LOG.log(Level.SEVERE, "Unable to getCommitOfTag " + tagName + " due to " + e.getMessage());
+            LoggerUtil.MERGE_LOG.log(Level.SEVERE, "Unable to getCommitOfTag " + tagName + " due to " + e.getMessage());
         }
         return null;
     }
