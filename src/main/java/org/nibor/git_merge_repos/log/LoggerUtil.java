@@ -26,13 +26,13 @@ public class LoggerUtil {
     }
 
     private static void configLogger() throws IOException {
-        FileHandler mergeFilerHandler = new FileHandler("merge.log", false);
+        FileHandler mergeFilerHandler = new FileHandler("merge.log", true);
         mergeFilerHandler.setLevel(Level.ALL);
         mergeFilerHandler.setFormatter(new CustomLogFormatter());
         MERGE_LOG.addHandler(mergeFilerHandler);
         MERGE_LOG.setUseParentHandlers(false);
 
-        FileHandler prepareFileHandler = new FileHandler("prepare.log", false);
+        FileHandler prepareFileHandler = new FileHandler("prepare.log", true);
         prepareFileHandler.setLevel(Level.ALL);
         prepareFileHandler.setFormatter(new CustomLogFormatter());
         PREPARE_LOG.addHandler(prepareFileHandler);
