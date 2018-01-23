@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-#usage: time git-filter-branch.sh > git_filter-branch.PREPARE_LOG 2>&1 &
+#usage: time git-filter-branch.sh > git_filter-branch.log 2>&1 &
 
-root=/udir/$USER/git/merge/input/bare1/
+dir=bare_`date '+%d-%^h-%Y'`
+root=/udir/$USER/git/merge/input/$dir/
 mkdir -p $root
 cd $root
 echo "Initiating git-merge-repo from: " $root
