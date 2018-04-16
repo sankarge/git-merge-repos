@@ -5,6 +5,7 @@ import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.transport.RefSpec;
 import org.nibor.git_merge_repos.util.FileUtil;
 import org.nibor.git_merge_repos.vo.MergedRef;
 import org.nibor.git_merge_repos.vo.SubtreeConfig;
@@ -54,6 +55,8 @@ public class RepoMerger {
 
     public void run() throws IOException, GitAPIException {
 
+        fetch();
+
         loadParentTagInfo();
 
         Collection<String> branches = getRefSet(HEADS);
@@ -69,6 +72,14 @@ public class RepoMerger {
         deleteOriginalRefs();
 
         resetToBranch();
+    }
+
+    private void fetch() throws GitAPIException {
+        for (SubtreeConfig config : subtreeConfigs) {
+            RefSpec branchesSpec = new RefSpec("refs/heads/*:refs/heads/original/" + config.getRemoteName() + "/*");
+            RefSpec tagsSpec = new RefSpec("refs/tags/*:refs/tags/original/" + config.getRemoteName() + "/*");
+            git.fetch().setRemote(config.getFetchUri().toPrivateString()).setRefSpecs(branchesSpec, tagsSpec).call();
+        }
     }
 
     private void mergeOlder(Collection<String> tags, Map<String, TreeSet<String>> tagsOfBranch) {
