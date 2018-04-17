@@ -40,13 +40,12 @@ public class MergedRef {
 		messageBuilder.append("\n\n");
 		messageBuilder.append("Repositories:");
 		appendRepositoryNames(messageBuilder, configsWithRef);
-		if (!configsWithoutRef.isEmpty()) {
-			messageBuilder.append("\n\nRepositories without this ").append(refType).append(":");
-			appendRepositoryNames(messageBuilder, configsWithoutRef);
-		}
-		messageBuilder.append("\n");
-		String message = messageBuilder.toString();
-		return message;
+//		if (!configsWithoutRef.isEmpty()) {
+//			messageBuilder.append("\n\nRepositories without this ").append(refType).append(":");
+//			appendRepositoryNames(messageBuilder, configsWithoutRef);
+//		}
+//		messageBuilder.append("\n");
+		return messageBuilder.toString();
 	}
 
 	private static void appendRepositoryNames(StringBuilder builder,

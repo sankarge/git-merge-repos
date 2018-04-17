@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#usage: time git-filter-branch.sh > git_filter-branch.log 2>&1 &
 
 dir=bare_`date '+%d-%^h-%Y'`
 root=/udir/$USER/git/merge/input/$dir/
