@@ -25,6 +25,7 @@ for repo in `awk '!/puppet/{print $2}' $gitSlave | sed -e 's/"//g'`
 		cd $repo
 
         nohup git filter-branch --index-filter 'tab=$(printf "\t") && git ls-files -s --error-unmatch . >/dev/null 2>&1; [ $? != 0 ] || (git ls-files -s | sed "s~$tab\"*~&'$repo'/~" | GIT_INDEX_FILE=$GIT_INDEX_FILE.new git update-index --index-info && mv "$GIT_INDEX_FILE.new" "$GIT_INDEX_FILE")'  --tag-name-filter cat -- --all > git-filter-branch-$repo.log 2>&1 &
+        echo "tail log file for more info. file: `pwd`/git-filter-branch-$repo.log"
 
 		cd $root
 	done
