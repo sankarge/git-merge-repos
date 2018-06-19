@@ -6,6 +6,7 @@ git pull
 
 today=`date '+%d-%^h-%Y'`
 dir=bare_$today
+merged_dir=merged_$today
 
 echo `date`: Started git-filter-branch
 
@@ -39,10 +40,10 @@ echo `date`: Completed git-filter-branch
 
 sleep 300
 
-echo `date`: Started merging multiple git repo into one, from $dir
+echo `date`: Started merging multiple git repo into one, from $dir to $merged_dir
 
-mvn --file=pom.xml clean compile exec:java -Dexec.args="merge /udir/sankarge/git/merge/output/merged /udir/sankarge/git/merge/input/$dir/sdcna-super:. /udir/sankarge/git/merge/input/$dir/sdcna:. /udir/sankarge/git/merge/input/$dir/commons:. /udir/sankarge/git/merge/input/$dir/dsl:. /udir/sankarge/git/merge/input/$dir/drdsl-webapp:. /udir/sankarge/git/merge/input/$dir/platform:. /udir/sankarge/git/merge/input/$dir/optical:. /udir/sankarge/git/merge/input/$dir/ipm:. /udir/sankarge/git/merge/input/$dir/na-birt:." | tee mvn.log 2>&1
+mvn --file=pom.xml clean compile exec:java -Dexec.args="merge /udir/sankarge/git/merge/output/$merged_dir /udir/sankarge/git/merge/input/$dir/sdcna-super:. /udir/sankarge/git/merge/input/$dir/sdcna:. /udir/sankarge/git/merge/input/$dir/commons:. /udir/sankarge/git/merge/input/$dir/dsl:. /udir/sankarge/git/merge/input/$dir/drdsl-webapp:. /udir/sankarge/git/merge/input/$dir/platform:. /udir/sankarge/git/merge/input/$dir/optical:. /udir/sankarge/git/merge/input/$dir/ipm:. /udir/sankarge/git/merge/input/$dir/na-birt:." | tee mvn.log 2>&1
 
-echo `date`: Completed merging multiple git repo into one, from $dir
+echo `date`: Completed merging multiple git repo into one, from $dir to $merged_dir
 
-./src/main/resources/post-merge.sh
+./src/main/resources/post-merge.sh $merged_dir
